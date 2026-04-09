@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Analytics</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: #eef3f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #2f3d52; margin: 0; }
+        .analytics-container { max-width: 1180px; margin: 40px auto; padding: 32px; background: white; border-radius: 20px; box-shadow: 0 18px 40px rgba(18, 43, 85, 0.08); }
+        .analytics-container h1 { margin: 0; font-size: 2.2rem; }
+        .analytics-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 32px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px; margin-bottom: 32px; }
+        .stat-card { background: #f8fbff; padding: 24px; border-radius: 16px; box-shadow: 0 12px 28px rgba(38, 78, 128, 0.06); text-align: center; }
+        .stat-number { font-size: 2.4rem; font-weight: 700; color: #1d4eb8; margin: 14px 0 6px; }
+        .stat-label { color: #55697a; font-size: 1.05rem; }
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; margin-bottom: 32px; }
+        .chart-container { background: white; padding: 24px; border-radius: 18px; box-shadow: 0 14px 30px rgba(37, 75, 132, 0.08); min-height: 360px; }
+        .chart-title { text-align: center; margin-bottom: 20px; font-size: 1.25rem; font-weight: 700; color: #1f4f91; }
+        .btn { padding: 12px 24px; background: #1976d2; color: white; text-decoration: none; border-radius: 12px; margin: 0 6px; display: inline-block; transition: background 0.2s ease, transform 0.2s ease; }
+        .btn:hover { background: #155bb5; transform: translateY(-1px); }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th, td { padding: 16px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f7f9fc; color: #405a7f; font-weight: 600; }
+        tr:hover { background-color: #f4f7fb; }
+        .course-cell { color: #1f4f91; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="analytics-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h1>📊 Student Analytics Dashboard</h1>
+            <div>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+                <a href="{{ url_for('export_csv') }}" class="btn">📥 Export CSV</a>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_students }}</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ course_data|length }}</div>
+                <div class="stat-label">Active Courses</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ enrollment_trends|length }}</div>
+                <div class="stat-label">Enrollment Periods</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <!-- Course Distribution Chart -->
+            <div class="chart-container">
+                <div class="chart-title">Students by Course</div>
+                <canvas id="courseChart" width="400" height="300"></canvas>
+            </div>
+
+            <!-- Enrollment Trends Chart -->
+            <div class="chart-container">
+                <div class="chart-title">Enrollment Trends</div>
+                <canvas id="enrollmentChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- Course Details Table -->
+        <div class="chart-container">
+            <div class="chart-title">Course Distribution Details</div>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Course</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Number of Students</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in course_data %}
+                    <tr>
+                        <td style="padding: 12px; border-bottom: 1px solid #ddd;">{{ course.course or 'Not Specified' }}</td>
+                        <td style="padding: 12px; border-bottom: 1px solid #ddd;">{{ course.count }}</td>
+                        <td style="padding: 12px; border-bottom: 1px solid #ddd;">
+                            {{ "%.1f"|format((course.count / total_students) * 100) }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="application/json" id="course-data">
+        {{ course_data|tojson|safe }}
+    </script>
+
+    <script type="application/json" id="enrollment-data">
+        {{ enrollment_trends|tojson|safe }}
+    </script>
+
+    <script>
+        const courseCtx = document.getElementById('courseChart').getContext('2d');
+        const courseJson = document.getElementById('course-data').textContent.trim();
+        const courseData = courseJson ? JSON.parse(courseJson) : [];
+        const courseLabels = courseData.map(item => item.course || 'Not Specified');
+        const courseCounts = courseData.map(item => item.count);
+
+        new Chart(courseCtx, {
+            type: 'doughnut',
+            data: {
+                labels: courseLabels,
+                datasets: [{
+                    data: courseCounts,
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        const enrollmentCtx = document.getElementById('enrollmentChart').getContext('2d');
+        const enrollmentJson = document.getElementById('enrollment-data').textContent.trim();
+        const enrollmentData = enrollmentJson ? JSON.parse(enrollmentJson) : [];
+        const enrollmentLabels = enrollmentData.map(item => item.month);
+        const enrollmentCounts = enrollmentData.map(item => item.count);
+
+        new Chart(enrollmentCtx, {
+            type: 'line',
+            data: {
+                labels: enrollmentLabels,
+                datasets: [{
+                    label: 'New Enrollments',
+                    data: enrollmentCounts,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
