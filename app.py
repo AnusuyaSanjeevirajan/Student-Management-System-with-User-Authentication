@@ -5,9 +5,7 @@ import io
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, Response, flash, session, jsonify
 
-# Ensure Flask finds templates correctly
-template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
-app = Flask(__name__, template_folder=template_dir)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key')
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'students.db'))
 
