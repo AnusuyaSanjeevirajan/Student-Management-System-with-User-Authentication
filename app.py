@@ -5,7 +5,12 @@ import io
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, Response, flash, session, jsonify
 
-app = Flask(__name__, template_folder='templates', static_folder='static')
+# Get absolute paths for templates and static
+basedir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(basedir, 'templates')
+static_dir = os.path.join(basedir, 'static')
+
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key')
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'students.db'))
 
