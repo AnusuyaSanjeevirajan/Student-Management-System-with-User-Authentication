@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, redirect, url_for, Response, 
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key')
-DB_PATH = '/tmp/students.db'
+DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'students.db'))
 
 
 def get_db_connection():
@@ -335,6 +335,7 @@ def health():
     return jsonify({'status': 'ok'})
 
 
+# This allows gunicorn to import the app object
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
